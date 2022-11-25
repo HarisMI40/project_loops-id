@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Langganan;
+use App\Models\Berlangganan;
 use App\Providers\RouteServiceProvider;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\Request;
@@ -18,9 +20,11 @@ class RegisteredUserController extends Controller
      *
      * @return \Illuminate\View\View
      */
-    public function create()
+    public function create($id)
     {
-        return view('auth.register');
+ 
+        $langganan = Langganan::where('id',$id)->first();
+        return view('auth.register', ['langganan' => $langganan]);
     }
 
     /**
@@ -34,21 +38,34 @@ class RegisteredUserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name' => ['required', 'string', 'max:255'],
+            'nama_lengkap' => ['required', 'string', 'max:255'],
+            'username' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:'.User::class],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $user = User::create([
-            'name' => $request->name,
+            'nama_lengkap' => $request->nama_lengkap,
+            'username' => $request->username,
             'email' => $request->email,
+            'no_hp' =>$request->no_hp,
             'password' => Hash::make($request->password),
+            'is_active' => true
         ]);
+
+        if($user){
+            $berlangganan = Berlangganan::create([
+                'id_user' => $user->id,
+                'id_langganan' => $request->id_langganan,
+                'status' => "pending"
+            ]);
+        }
 
         event(new Registered($user));
 
         Auth::login($user);
 
-        return redirect(RouteServiceProvider::HOME);
+        // return redirect(RouteServiceProvider::HOME);
+        return redirect('pembayaran/'. $berlangganan->id);
     }
 }
